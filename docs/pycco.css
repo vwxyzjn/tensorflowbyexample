@@ -88,6 +88,7 @@ div.main-title {
   padding: 10px 25px 1px 50px;
   vertical-align: top;
   text-align: left;
+  width: 100%
 }
 div.execution {
   float: right;
