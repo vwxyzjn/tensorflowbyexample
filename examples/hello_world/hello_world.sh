@@ -1,2 +1,3 @@
+# Now Let's run the script and observe the result
 $ python hello_world.py
-# This shows the desired output
+hello world 20.25

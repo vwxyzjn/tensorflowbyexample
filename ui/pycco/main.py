@@ -66,28 +66,37 @@ from pycco_resources import pycco_template
 # === Main Documentation Generation Functions ===
 
 
-def generate_documentation(source, outdir=None, preserve_paths=True,
+def generate_documentation(files, outdir=None, preserve_paths=True,
                            language=None, encoding="utf8"):
     """
-    Generate the documentation for a source file by reading it in, splitting it
+    Generate the documentation for source files by reading it in, splitting it
     up into comment/code sections, highlighting them for the appropriate
     language, and merging them into an HTML template.
     """
 
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
-    code = open(source, "rb").read().decode(encoding)
-    return _generate_documentation(source, code, outdir, preserve_paths, language)
+    codes = [open(item, "rb").read().decode(encoding) for item in files]
+    return _generate_documentation(files, codes, outdir, preserve_paths, language)
 
 
-def _generate_documentation(file_path, code, outdir, preserve_paths, language):
+def _generate_documentation(file_paths, codes, outdir, preserve_paths, language):
     """
     Helper function to allow documentation generation without file handling.
     """
-    language = get_language(file_path, code, language_name=language)
-    sections = parse(code, language)
-    highlight(sections, language, preserve_paths=preserve_paths, outdir=outdir)
-    return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
+    sectionss = []
+    title = None
+    for i in range(len(file_paths)):
+        if path.basename(file_paths[i]).split('.')[-1] == "title":
+            title = codes[i]
+            print(title)
+            continue
+        language = None
+        language = get_language(file_paths[i], codes[i], language_name=language)
+        sections = parse(codes[i], language)
+        highlight(sections, language, preserve_paths=preserve_paths, outdir=outdir)
+        sectionss += [sections]
+    return generate_html(file_paths, sectionss, preserve_paths=preserve_paths, outdir=outdir, title=title)
 
 
 def parse(code, language):
@@ -311,7 +320,7 @@ def highlight(sections, language, preserve_paths=True, outdir=None):
 # === HTML Code generation ===
 
 
-def generate_html(source, sections, preserve_paths=True, outdir=None):
+def generate_html(sources, sectionss, preserve_paths=True, outdir=None, title=None):
     """
     Once all of the code is finished highlighting, we can generate the HTML
     file and write out the documentation. Pass the completed sections into the
@@ -325,19 +334,22 @@ def generate_html(source, sections, preserve_paths=True, outdir=None):
 
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument")
-    title = path.basename(source)
-    dest = destination(source, preserve_paths=preserve_paths, outdir=outdir)
+
+    if title is None:
+        title = path.basename(sources[0])
+    dest = destination(sources[0], preserve_paths=preserve_paths, outdir=outdir)
     csspath = path.relpath(path.join(outdir, "pycco.css"), path.split(dest)[0])
 
-    for sect in sections:
-        sect["code_html"] = re.sub(
-            r"\{\{", r"__DOUBLE_OPEN_STACHE__", sect["code_html"])
+    for sections in sectionss:
+        for sect in sections:
+            sect["code_html"] = re.sub(
+                r"\{\{", r"__DOUBLE_OPEN_STACHE__", sect["code_html"])
 
     rendered = pycco_template({
         "title": title,
         "stylesheet": csspath,
-        "sections": sections,
-        "source": source,
+        "sectionss": sectionss,
+        "sources": sources,
     })
 
     return re.sub(r"__DOUBLE_OPEN_STACHE__", "{{", rendered).encode("utf-8")
@@ -505,11 +517,9 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
         generated_files = []
 
         def next_file():
-            s = [sources.pop(0) for _ in range(num_files)]
-            # print(s)
-            # raise Exception("xixi")
+            files = [sources.pop(0) for _ in range(num_files)]
             # TODO: do a more general approach instead of just using the first file name
-            dest = destination(s[0], preserve_paths=preserve_paths, outdir=outdir)
+            dest = destination(files[0], preserve_paths=preserve_paths, outdir=outdir)
 
             try:
                 os.makedirs(path.split(dest)[0])
@@ -518,16 +528,16 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
             try:
                 with open(dest, "wb") as f:
-                    f.write(generate_documentation(s[0], preserve_paths=preserve_paths,
+                    f.write(generate_documentation(files, preserve_paths=preserve_paths,
                                                    outdir=outdir,
                                                    language=language,
                                                    encoding=encoding))
 
-                print("pycco: {} -> {}".format(s, dest))
+                print("pycco: {} -> {}".format(files, dest))
                 generated_files.append(dest)
             except (ValueError, UnicodeDecodeError) as e:
                 if skip:
-                    print("pycco [FAILURE]: {}, {}".format(s, e))
+                    print("pycco [FAILURE]: {}, {}".format(files, e))
                 else:
                     raise
 
