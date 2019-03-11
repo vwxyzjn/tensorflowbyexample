@@ -77,6 +77,7 @@ def generate_documentation(files, outdir=None, preserve_paths=True,
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
     codes = [open(item, "rb").read().decode(encoding) for item in files]
+    print(repr(codes[0]))
     return _generate_documentation(files, codes, outdir, preserve_paths, language)
 
 
@@ -89,7 +90,6 @@ def _generate_documentation(file_paths, codes, outdir, preserve_paths, language)
     for i in range(len(file_paths)):
         if path.basename(file_paths[i]).split('.')[-1] == "title":
             title = codes[i]
-            print(title)
             continue
         language = None
         language = get_language(file_paths[i], codes[i], language_name=language)
@@ -518,7 +518,6 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
         def next_file():
             files = [sources.pop(0) for _ in range(num_files)]
-            # TODO: do a more general approach instead of just using the first file name
             dest = destination(files[0], preserve_paths=preserve_paths, outdir=outdir)
 
             try:
@@ -545,6 +544,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
                 next_file()
         next_file()
 
+        print(generated_files)
         if index:
             with open(path.join(outdir, "index.html"), "wb") as f:
                 f.write(generate_index(generated_files, outdir))
