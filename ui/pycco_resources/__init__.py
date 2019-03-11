@@ -27,7 +27,7 @@ h2, h3, h4, h5, h6 {
   }
 #container {
   background: white;
-  height: 100vh
+  min-height: 100vh
  }
 #container, div.section {
   position: relative;
