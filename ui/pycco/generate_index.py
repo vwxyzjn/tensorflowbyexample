@@ -47,7 +47,6 @@ def generate_tree_html(tree):
     Given a tree representing HTML file paths, return an HTML table plotting
     those paths.
     """
-    print(tree)
     items = []
     for node, subtree in sorted(compat_items(tree)):
         if 'entry' in subtree:
@@ -68,8 +67,6 @@ def generate_index(files, outdir):
     index of all files.
     """
     tree = build_tree(files, outdir)
-
-    print(f'generate_tree_html(tree) {generate_tree_html(tree)}')
 
     rendered = pycco_template({
         "title": 'Tensorflow By Example',

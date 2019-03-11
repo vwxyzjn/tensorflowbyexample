@@ -61,7 +61,8 @@ from pycco.generate_index import generate_index
 from pycco.languages import supported_languages
 from pycco_resources import css as pycco_css
 # This module contains all of our static resources.
-from pycco_resources import pycco_template
+from pycco_resources import pycco_template, colab_url_prefix
+import urllib
 
 # === Main Documentation Generation Functions ===
 
@@ -77,7 +78,6 @@ def generate_documentation(files, outdir=None, preserve_paths=True,
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
     codes = [open(item, "rb").read().decode(encoding) for item in files]
-    print(repr(codes[0]))
     return _generate_documentation(files, codes, outdir, preserve_paths, language)
 
 
@@ -91,12 +91,15 @@ def _generate_documentation(file_paths, codes, outdir, preserve_paths, language)
         if path.basename(file_paths[i]).split('.')[-1] == "title":
             title = codes[i]
             continue
+        elif path.basename(file_paths[i]).split('.')[-1] == "ipynb":
+            ipynb_path = file_paths[i].lstrip(".\\").replace("\\", "/")
+            continue
         language = None
         language = get_language(file_paths[i], codes[i], language_name=language)
         sections = parse(codes[i], language)
         highlight(sections, language, preserve_paths=preserve_paths, outdir=outdir)
         sectionss += [sections]
-    return generate_html(file_paths, sectionss, preserve_paths=preserve_paths, outdir=outdir, title=title)
+    return generate_html(file_paths, sectionss, preserve_paths=preserve_paths, outdir=outdir, title=title, ipynb_path=ipynb_path)
 
 
 def parse(code, language):
@@ -320,7 +323,7 @@ def highlight(sections, language, preserve_paths=True, outdir=None):
 # === HTML Code generation ===
 
 
-def generate_html(sources, sectionss, preserve_paths=True, outdir=None, title=None):
+def generate_html(sources, sectionss, preserve_paths=True, outdir=None, title=None, ipynb_path=None):
     """
     Once all of the code is finished highlighting, we can generate the HTML
     file and write out the documentation. Pass the completed sections into the
@@ -350,6 +353,7 @@ def generate_html(sources, sectionss, preserve_paths=True, outdir=None, title=No
         "stylesheet": csspath,
         "sectionss": sectionss,
         "sources": sources,
+        "ipynb_path": urllib.parse.urljoin(colab_url_prefix, ipynb_path)
     })
 
     return re.sub(r"__DOUBLE_OPEN_STACHE__", "{{", rendered).encode("utf-8")
@@ -544,7 +548,6 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
                 next_file()
         next_file()
 
-        print(generated_files)
         if index:
             with open(path.join(outdir, "index.html"), "wb") as f:
                 f.write(generate_index(generated_files, outdir))
