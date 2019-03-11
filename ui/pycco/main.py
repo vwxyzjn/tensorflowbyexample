@@ -483,7 +483,7 @@ def _flatten_sources(sources):
 
 
 def process(sources, preserve_paths=True, outdir=None, language=None,
-            encoding="utf8", index=False, skip=False):
+            encoding="utf8", index=False, skip=False, num_files=1):
     """
     For each source file passed as argument, generate the documentation.
     """
@@ -505,8 +505,11 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
         generated_files = []
 
         def next_file():
-            s = sources.pop(0)
-            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir)
+            s = [sources.pop(0) for _ in range(num_files)]
+            # print(s)
+            # raise Exception("xixi")
+            # TODO: do a more general approach instead of just using the first file name
+            dest = destination(s[0], preserve_paths=preserve_paths, outdir=outdir)
 
             try:
                 os.makedirs(path.split(dest)[0])
@@ -515,7 +518,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
             try:
                 with open(dest, "wb") as f:
-                    f.write(generate_documentation(s, preserve_paths=preserve_paths,
+                    f.write(generate_documentation(s[0], preserve_paths=preserve_paths,
                                                    outdir=outdir,
                                                    language=language,
                                                    encoding=encoding))
@@ -618,6 +621,9 @@ def main():
                       dest='skip_bad_files',
                       help='Continue processing after hitting a bad file')
 
+    parser.add_argument('-n', '--num-files', type=int, default=1,
+                        help='Number of files in the leaf directory. Default is 1')
+
     parser.add_argument('sources', nargs='*')
 
     args = parser.parse_args()
@@ -628,7 +634,7 @@ def main():
 
     process(args.sources, outdir=outdir, preserve_paths=args.paths,
             language=args.language, index=args.generate_index,
-            skip=args.skip_bad_files)
+            skip=args.skip_bad_files, num_files=args.num_files)
 
     # If the -w / \-\-watch option was present, monitor the source directories
     # for changes and re-generate documentation for source files whenever they
