@@ -72,3 +72,4 @@ if __name__ == '__main__':
                         continue
                     os.remove(dst_file)
                 shutil.move(src_file, dst_dir)
+        shutil.rmtree(root_src_dir)
